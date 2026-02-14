@@ -40,6 +40,8 @@ This project uses a "Modern Data Stack" approach:
 ## 📈 Results
 The tool currently categorizes jobs into distinct market segments with high accuracy, visualizing the demand for specific skills like **Python**, **AWS**, and **React**.
 
+![Market Trends Chart](market_trends.png)
+
 ## 📊 Live Results (Feb 2026)
 The model successfully identified 3 distinct market segments from live job data:
 1.  **Cluster 0 (US Remote):** High-paying roles restricted to US residents (`usa`, `100% remote`).
