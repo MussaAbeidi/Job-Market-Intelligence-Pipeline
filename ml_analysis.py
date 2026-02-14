@@ -34,8 +34,8 @@ def run_ml_pipeline():
     X = vectorizer.fit_transform(df['title'])
 
     # 3. Clustering (The Sorter)
-    # We ask the model to find 3 distinct groups of jobs.
-    true_k = 3
+    # We ask the model to find 5 distinct groups of jobs.
+    true_k = 5
     model = KMeans(n_clusters=true_k, init='k-means++', n_init=10, random_state=42)
     model.fit(X)
 

@@ -15,12 +15,15 @@ def generate_visuals():
     print(f"Analyzing {len(df)} total records...")
 
     # Define the tech stack we want to measure
-    keywords = ['Python', 'Django', 'Flask', 'AWS', 'React', 'Data', 'AI']
+    keywords = [
+        'Python', 'JavaScript', 'TypeScript', 'Java', 'C++', 
+        'SQL', 'React', 'AWS', 'Cloud', 'Data', 'AI'
+    ]
     
     # Count occurrences (Case Insensitive)
     counts = {}
     for tech in keywords:
-        counts[tech] = df['title'].str.contains(tech, case=False).sum()
+        counts[tech] = df['title'].str.contains(tech, case=False, regex=False).sum()
 
     # Create DataFrame for plotting
     stats = pd.Series(counts).sort_values()

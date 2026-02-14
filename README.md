@@ -6,10 +6,8 @@ A full-stack data engineering tool that automates the extraction and analysis of
 This project uses a "Modern Data Stack" approach:
 1.  **Dynamic Extraction:** Uses **Selenium Webdriver** to launch a real browser instance, handling infinite scroll and dynamic DOM rendering that standard libraries (like `Requests`) cannot touch.
 2.  **Defensive Parsing:** Implements a robust `try-except` strategy to handle missing HTML tags without crashing the pipeline.
-3.  **Storage Layer:** Persists data to a local **SQLite** database for historical analysis.
+3.  **Storage Layer:** Persists data to a local **SQLite** database with automated de-duplication for historical analysis.
 4.  **Machine Learning:** Applies **Unsupervised Learning (K-Means)** to discover hidden job categories based on title semantics (TF-IDF).
-
-
 
 ## 🛠 Tech Stack
 -   **Automation:** Selenium, ChromeDriverManager
@@ -18,9 +16,9 @@ This project uses a "Modern Data Stack" approach:
 -   **Machine Learning:** Scikit-Learn (K-Means, TF-IDF Vectorization)
 
 ## ⚡ Key Features
--   **Browser Automation:** Navigates to live websites, scrolls to load lazy-loaded content, and mimics human behavior.
--   **Smart Clustering:** Uses the **Elbow Method** to mathematically validate the optimal number of job clusters ($k$).
--   **Centroid Analysis:** Automatically extracts the "defining keywords" for each job cluster (e.g., distinguishing "Backend" roles from "Data Science" roles).
+-   **Browser Automation:** Navigates to live websites, mimics human scrolling behavior, and handles lazy-loaded content.
+-   **Smart Clustering:** Uses the **Elbow Method** logic to validate the optimal number of job clusters ($k$).
+-   **Centroid Analysis:** Automatically extracts the "defining keywords" for each job cluster (e.g., distinguishing "Backend" roles from "Sales" roles).
 
 ## 🚀 How to Run
 1.  **Install Dependencies:**
@@ -36,16 +34,29 @@ This project uses a "Modern Data Stack" approach:
     ```bash
     python ml_analysis.py
     ```
+4.  **Generate Visuals:**
+    ```bash
+    python analyze.py
+    ```
 
 ## 📈 Results
-The tool currently categorizes jobs into distinct market segments with high accuracy, visualizing the demand for specific skills like **Python**, **AWS**, and **React**.
+The tool categorizes jobs into distinct market segments with high accuracy, visualizing the demand for specific skills.
 
 ![Market Trends Chart](market_trends.png)
+*(Tracked Keywords: Python, JavaScript, TypeScript, Java, C++, SQL, React, AWS, Cloud, Data, AI)*
 
 ## 📊 Live Results (Feb 2026)
-The model successfully identified 3 distinct market segments from live job data:
-1.  **Cluster 0 (US Remote):** High-paying roles restricted to US residents (`usa`, `100% remote`).
-2.  **Cluster 1 (Core Engineering):** Traditional backend development roles (`backend`, `python`, `senior`).
-3.  **Cluster 2 (AI/ML):** Emerging demand for Large Language Model engineering (`llm`, `ai`, `genai`).
+**Scale:** Analyzed **249 real-time job postings** across the entire platform.
 
-**Silhouette Score:** 0.51 (indicating strong separation between clusters).
+**Market Insights:**
+* **AI Dominance:** "AI" is the #1 most cited technology in the sample (16 mentions), outpacing traditional web frameworks like React and Django.
+* **The "C++" Verification:** Analysis correctly filters for strict keyword matches, ensuring that common letters (like 'C') don't trigger false positives for languages like C++.
+* **Cluster Analysis:** The K-Means algorithm ($k=5$) successfully separated roles into distinct categories without labeled training data:
+    * **Cluster 0:** Product Engineering & Leadership
+    * **Cluster 1:** Senior Web Development
+    * **Cluster 2:** Sales & Operations
+    * **Cluster 3:** Enterprise Business & Accounts
+    * **Cluster 4:** Infrastructure, DevOps & AI
+
+---
+*Built by Mussa Abeidi as a Data Engineering Portfolio Project.*

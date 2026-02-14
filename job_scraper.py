@@ -48,7 +48,7 @@ def scrape_jobs():
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     
     try:
-        url = "https://weworkremotely.com/remote-jobs/search?term=python"
+        url = "https://weworkremotely.com/remote-jobs/search?term="
         print(f"Navigating to: {url}")
         driver.get(url)
         
