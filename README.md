@@ -39,3 +39,11 @@ This project uses a "Modern Data Stack" approach:
 
 ## 📈 Results
 The tool currently categorizes jobs into distinct market segments with high accuracy, visualizing the demand for specific skills like **Python**, **AWS**, and **React**.
+
+## 📊 Live Results (Feb 2026)
+The model successfully identified 3 distinct market segments from live job data:
+1.  **Cluster 0 (US Remote):** High-paying roles restricted to US residents (`usa`, `100% remote`).
+2.  **Cluster 1 (Core Engineering):** Traditional backend development roles (`backend`, `python`, `senior`).
+3.  **Cluster 2 (AI/ML):** Emerging demand for Large Language Model engineering (`llm`, `ai`, `genai`).
+
+**Silhouette Score:** 0.51 (indicating strong separation between clusters).
