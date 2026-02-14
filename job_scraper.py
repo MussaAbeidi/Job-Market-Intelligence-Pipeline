@@ -21,7 +21,7 @@ def init_db():
                 title TEXT,
                 company TEXT,
                 region TEXT,
-                link TEXT,
+                link TEXT UNIQUE,
                 date_scraped TEXT
             )
         """)
@@ -30,9 +30,18 @@ def init_db():
 def scrape_jobs():
     """
     Scrapes WeWorkRemotely for Python jobs.
-    Uses Explicit Waits for reliability (Production Grade).
+    Includes De-Duplication and Explicit Waits.
     """
     print("--- Starting Extraction Pipeline ---")
+    
+    # 1. Load existing links to prevent duplicates
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            # We fetch all links into a simple set for fast checking
+            existing_links = set(row[0] for row in conn.execute("SELECT link FROM jobs"))
+    except sqlite3.OperationalError:
+        existing_links = set()
+
     options = Options()
     # options.add_argument("--headless") # Uncomment for production (no UI)
     
@@ -43,13 +52,12 @@ def scrape_jobs():
         print(f"Navigating to: {url}")
         driver.get(url)
         
-        # PRO MOVE: Don't just sleep. Wait until the list actually appears.
-        # This prevents the script from crashing if the internet is slow.
+        # Wait for the job section to load (max 10 seconds)
         wait = WebDriverWait(driver, 10)
-        job_section = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "section.jobs")))
+        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "section.jobs")))
         
-        # Grab all list items (listings) excluding the 'view all' button
-        job_cards = job_section.find_elements(By.CSS_SELECTOR, "li:not(.view-all)")
+        # Expanded selector to find ALL jobs on the page
+        job_cards = driver.find_elements(By.CSS_SELECTOR, "section.jobs li:not(.view-all)")
         print(f"Detected {len(job_cards)} listings. Processing...")
 
         new_jobs = []
@@ -57,38 +65,38 @@ def scrape_jobs():
 
         for card in job_cards:
             try:
-                # We use finding relative to the 'card' element
-                title = card.find_element(By.CSS_SELECTOR, "h3.new-listing__header__title").text
-                company = card.find_element(By.CSS_SELECTOR, "p.new-listing__company-name").text
+                # Extract link first to check for duplicates
                 link = card.find_element(By.CSS_SELECTOR, "a.listing-link--unlocked").get_attribute("href")
                 
-                # Region is inconsistent, so we try/except it
+                if link in existing_links:
+                    continue # Skip this job, we already have it
+
+                title = card.find_element(By.CSS_SELECTOR, "h3.new-listing__header__title").text
+                company = card.find_element(By.CSS_SELECTOR, "p.new-listing__company-name").text
+                
                 try:
                     region = card.find_element(By.CSS_SELECTOR, "p.new-listing__company-headquarters").text
                 except:
                     region = "Remote"
 
-                # Check if we already have this exact job to avoid duplicates
-                # (In a real system, we'd check the DB, but this is a simple run-level check)
                 new_jobs.append((title, company, region, link, scrape_date))
-                print(f" -> Found: {title}")
+                print(f" -> Found New Job: {title}")
 
             except Exception:
-                # Skip non-job rows (headers/ads)
                 continue
 
-        # Save to Database (Append Mode)
+        # Transactional Save
         if new_jobs:
             with sqlite3.connect(DB_NAME) as conn:
                 cursor = conn.cursor()
                 cursor.executemany("""
-                    INSERT INTO jobs (title, company, region, link, date_scraped) 
+                    INSERT OR IGNORE INTO jobs (title, company, region, link, date_scraped) 
                     VALUES (?, ?, ?, ?, ?)
                 """, new_jobs)
                 conn.commit()
             print(f"\nSuccess: Added {len(new_jobs)} new records to {DB_NAME}.")
         else:
-            print("\nWarning: No jobs extracted. Check selectors.")
+            print("\nPipeline Complete. No new jobs found since last run.")
 
     finally:
         driver.quit()

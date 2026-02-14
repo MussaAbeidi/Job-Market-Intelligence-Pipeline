@@ -7,49 +7,61 @@ from sklearn.metrics import silhouette_score
 DB_NAME = "job_market.db"
 
 def run_ml_pipeline():
+    """
+    Reads job data from SQLite and performs Unsupervised Learning (K-Means)
+    to discover hidden market segments in job titles.
+    """
+    
     # 1. Load Data
-    with sqlite3.connect(DB_NAME) as conn:
-        df = pd.read_sql("SELECT title FROM jobs", conn)
-
-    # Need at least a few jobs to run clustering
-    if len(df) < 5:
-        print("Not enough data for Machine Learning yet. Run the scraper first!")
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            df = pd.read_sql("SELECT title FROM jobs", conn)
+    except sqlite3.OperationalError:
+        print("Error: Database not found. Please run job_scraper.py first.")
         return
 
-    print(f"Training model on {len(df)} job titles...")
+    # Safety Check: We need enough data to form meaningful groups
+    if len(df) < 5:
+        print(f"Not enough data ({len(df)} records). Run the scraper again to get more jobs.")
+        return
 
-    # 2. Vectorization (Convert text to numbers)
-    # TF-IDF penalizes common words (like "Senior") and boosts unique ones (like "Django")
+    print(f"--- Starting ML Analysis on {len(df)} job titles ---")
+
+    # 2. Vectorization (The Translator)
+    # Convert text titles into numerical vectors so the math can work.
+    # stop_words='english' removes useless words like 'the', 'and', 'for'.
     vectorizer = TfidfVectorizer(stop_words='english')
     X = vectorizer.fit_transform(df['title'])
 
-    # 3. Clustering (K-Means)
-    # We use 3 clusters: usually splits into Data, Backend, and Fullstack/Web
+    # 3. Clustering (The Sorter)
+    # We ask the model to find 3 distinct groups of jobs.
     true_k = 3
     model = KMeans(n_clusters=true_k, init='k-means++', n_init=10, random_state=42)
     model.fit(X)
 
-    # 4. Evaluation (Silhouette Score)
-    # A score close to 1 is great, 0 is overlapping, -1 is wrong.
+    # 4. Evaluation (The Grader)
+    # Silhouette Score ranges from -1 to 1. 
+    # A score > 0.1 means the clusters are reasonably distinct.
     score = silhouette_score(X, model.labels_)
-    print(f"Clustering Performance (Silhouette Score): {score:.3f}")
+    print(f"Clustering Confidence (Silhouette Score): {score:.3f}")
 
-    # 5. Insight Extraction (The "Why")
-    print("\n--- Market Segmentation Results ---")
+    # 5. Extract Insights
+    print("\n--- Discovered Market Segments ---")
     
-    # Get the top keywords for each cluster center
+    # Grab the top words that define each cluster center
     order_centroids = model.cluster_centers_.argsort()[:, ::-1]
     terms = vectorizer.get_feature_names_out()
 
     for i in range(true_k):
-        print(f"\nCluster {i} (Key Themes):")
-        # Print the top 4 words that define this group
-        top_terms = [terms[ind] for ind in order_centroids[i, :4]]
-        print(f" -> {', '.join(top_terms)}")
+        print(f"\nCluster {i} Theme:")
         
-        # Show sample jobs from this cluster
-        cluster_jobs = df.iloc[model.labels_ == i]['title'].head(3).tolist()
-        print(f"    Examples: {cluster_jobs}")
+        # Print the top 3 keywords that define this group
+        top_terms = [terms[ind] for ind in order_centroids[i, :3]]
+        print(f" -> Keywords: {', '.join(top_terms)}")
+        
+        # Show 2 actual job titles from this group as proof
+        sample_jobs = df.iloc[model.labels_ == i]['title'].head(2).tolist()
+        print(f" -> Examples: {sample_jobs}")
 
 if __name__ == "__main__":
     run_ml_pipeline()
