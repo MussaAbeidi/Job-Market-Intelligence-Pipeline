@@ -1,22 +1,41 @@
-# Job Market Intelligence Pipeline 📊
+# Real-Time Job Market Intelligence Pipeline 🚀
 
-A full-stack data engineering project designed to scrape, store, and analyze job market data using Python. I built this to move beyond simple keyword matching and use Unsupervised Machine Learning to discover hidden categories in job titles.
+A full-stack data engineering tool that automates the extraction and analysis of real-world job data. I built this to move beyond static scraping and handle dynamic, JavaScript-heavy job boards like *We Work Remotely*.
 
-## Architecture
-1. **ETL Pipeline:** - **Extract:** Scrapes job data using `Requests` + `BeautifulSoup`. Includes defensive error handling for robust parsing.
-   - **Transform:** Cleanses text and standardizes data formats.
-   - **Load:** Persists data into a `SQLite` database for historical tracking.
-2. **Analysis Engine:**
-   - **Statistical:** `Pandas` for aggregation and `Matplotlib` for trend visualization.
-   - **Machine Learning:** `Scikit-Learn` implementation of K-Means Clustering to group jobs automatically.
-   - **Validation:** Uses the **Elbow Method** to mathematically determine the optimal number of job clusters.
+## 🏗 Architecture
+This project uses a "Modern Data Stack" approach:
+1.  **Dynamic Extraction:** Uses **Selenium Webdriver** to launch a real browser instance, handling infinite scroll and dynamic DOM rendering that standard libraries (like `Requests`) cannot touch.
+2.  **Defensive Parsing:** Implements a robust `try-except` strategy to handle missing HTML tags without crashing the pipeline.
+3.  **Storage Layer:** Persists data to a local **SQLite** database for historical analysis.
+4.  **Machine Learning:** Applies **Unsupervised Learning (K-Means)** to discover hidden job categories based on title semantics (TF-IDF).
 
-## Key Technical Decisions
-- **Why SQLite?** For a project of this scale (<100k records), a lightweight, serverless database is more performant than Postgres/MySQL and removes the need for complex docker containers.
-- **Why TF-IDF?** Simple word counts (Bag of Words) ignore context. TF-IDF helps weight unique technical terms (like "Kubernetes") higher than generic terms (like "Manager").
-- **Why K-Means?** It is efficient for unlabelled textual data. I implemented the **Elbow Method** to validate my choice of `k=3` clusters, minimizing the inertia (sum of squared distances).
 
-## Quick Start
-1. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
+
+## 🛠 Tech Stack
+-   **Automation:** Selenium, ChromeDriverManager
+-   **Database:** SQLite3
+-   **Analysis:** Pandas, Matplotlib, NumPy
+-   **Machine Learning:** Scikit-Learn (K-Means, TF-IDF Vectorization)
+
+## ⚡ Key Features
+-   **Browser Automation:** Navigates to live websites, scrolls to load lazy-loaded content, and mimics human behavior.
+-   **Smart Clustering:** Uses the **Elbow Method** to mathematically validate the optimal number of job clusters ($k$).
+-   **Centroid Analysis:** Automatically extracts the "defining keywords" for each job cluster (e.g., distinguishing "Backend" roles from "Data Science" roles).
+
+## 🚀 How to Run
+1.  **Install Dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+2.  **Run the Scraper:**
+    *(Note: This will launch a visible Chrome window to demonstrate the automation)*
+    ```bash
+    python job_scraper.py
+    ```
+3.  **Run the Analysis:**
+    ```bash
+    python ml_analysis.py
+    ```
+
+## 📈 Results
+The tool currently categorizes jobs into distinct market segments with high accuracy, visualizing the demand for specific skills like **Python**, **AWS**, and **React**.
