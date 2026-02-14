@@ -1,19 +1,22 @@
-# Job Market Analyzer + ML Clustering
+# Job Market Intelligence Pipeline 📊
 
-I built this tool to get a better look at what's actually happening in the job market. It’s a full pipeline that scrapes job data, stores it in a database, and uses K-Means clustering to group roles based on their titles.
+A full-stack data engineering project designed to scrape, store, and analyze job market data using Python. I built this to move beyond simple keyword matching and use Unsupervised Machine Learning to discover hidden categories in job titles.
 
-## How it works
-1. **Scraping:** Uses `Requests` and `BeautifulSoup` to pull job listings from the web.
-2. **Database:** Saves everything to a local `SQLite` database so I can run analysis without re-scraping.
-3. **ML Clustering:** Uses `Scikit-Learn` (TF-IDF + K-Means) to categorize jobs. This helps find patterns between "Engineer" vs "Developer" vs "Management" roles automatically.
-4. **Viz:** Generates bar charts with `Matplotlib` to show where the jobs are and what skills are trending.
+## Architecture
+1. **ETL Pipeline:** - **Extract:** Scrapes job data using `Requests` + `BeautifulSoup`. Includes defensive error handling for robust parsing.
+   - **Transform:** Cleanses text and standardizes data formats.
+   - **Load:** Persists data into a `SQLite` database for historical tracking.
+2. **Analysis Engine:**
+   - **Statistical:** `Pandas` for aggregation and `Matplotlib` for trend visualization.
+   - **Machine Learning:** `Scikit-Learn` implementation of K-Means Clustering to group jobs automatically.
+   - **Validation:** Uses the **Elbow Method** to mathematically determine the optimal number of job clusters.
 
-## Tech Used
-- **Python** (Pandas, Scikit-Learn, Matplotlib, BS4)
-- **SQL** (SQLite3)
-- **Git** for version control
+## Key Technical Decisions
+- **Why SQLite?** For a project of this scale (<100k records), a lightweight, serverless database is more performant than Postgres/MySQL and removes the need for complex docker containers.
+- **Why TF-IDF?** Simple word counts (Bag of Words) ignore context. TF-IDF helps weight unique technical terms (like "Kubernetes") higher than generic terms (like "Manager").
+- **Why K-Means?** It is efficient for unlabelled textual data. I implemented the **Elbow Method** to validate my choice of `k=3` clusters, minimizing the inertia (sum of squared distances).
 
-## Setup
-- `pip install -r requirements.txt`
-- Run `job_scraper.py` to get the data.
-- Run `ml_analysis.py` to see the machine learning clusters.
+## Quick Start
+1. Install dependencies:
+   ```bash
+   pip install -r requirements.txt

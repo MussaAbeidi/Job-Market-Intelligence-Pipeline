@@ -2,36 +2,43 @@ import sqlite3
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def generate_insights():
-    # Load data into a dataframe
-    with sqlite3.connect("jobs.db") as conn:
-        df = pd.read_sql("SELECT * FROM jobs", conn)
-
-    if df.empty:
-        print("Nothing to analyze. Run the scraper first.")
+def generate_market_report():
+    # Load the dataset
+    try:
+        with sqlite3.connect("jobs.db") as conn:
+            df = pd.read_sql("SELECT * FROM jobs", conn)
+    except pd.io.sql.DatabaseError:
+        print("Database not found. Please run job_scraper.py first.")
         return
 
-    # Check for specific tech terms in the titles
-    stack = ['Python', 'Engineer', 'Manager', 'Developer', 'Data']
+    if df.empty:
+        print("Database is empty. Nothing to analyze.")
+        return
+
+    print(f"Generating report for {len(df)} job postings...")
+
+    # 1. Define the 'Tech Stack' we are interested in tracking
+    # We use a case-insensitive search to catch 'python' and 'Python'
+    target_skills = ['Python', 'Engineer', 'Manager', 'Developer', 'Data', 'Senior']
     
-    # Calculate frequencies using pandas string methods
-    counts = {word: df['title'].str.contains(word, case=False).sum() for word in stack}
-    results = pd.Series(counts).sort_values(ascending=False)
+    skill_counts = {}
+    for skill in target_skills:
+        skill_counts[skill] = df['title'].str.contains(skill, case=False).sum()
 
-    print("\n--- Market Demand (Title Keywords) ---")
-    print(results)
+    # 2. visualiztion
+    # converting to a Series makes plotting with pandas much easier
+    s_skills = pd.Series(skill_counts).sort_values(ascending=True)
 
-    # Plot the results
     plt.figure(figsize=(10, 6))
-    results.plot(kind='bar', color='teal', alpha=0.8)
+    s_skills.plot(kind='barh', color='#2c3e50', alpha=0.9)
     
-    plt.title("Keyword Frequency in Job Market Data")
-    plt.ylabel("Postings")
-    plt.xticks(rotation=0)
+    plt.title("Most Demanded Keywords in Job Titles")
+    plt.xlabel("Frequency")
     plt.tight_layout()
     
-    plt.savefig("skills_chart.png")
-    print("\nChart generated: skills_chart.png")
+    # Save to disk so we can embed this in the README later
+    plt.savefig("market_demand_chart.png")
+    print("Report generated: market_demand_chart.png")
 
 if __name__ == "__main__":
-    generate_insights()
+    generate_market_report()
