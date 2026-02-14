@@ -1,61 +1,55 @@
 import sqlite3
 import pandas as pd
-import matplotlib.pyplot as plt
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 
-def run_clustering_pipeline():
+DB_NAME = "job_market.db"
+
+def run_ml_pipeline():
     # 1. Load Data
-    with sqlite3.connect("jobs.db") as conn:
+    with sqlite3.connect(DB_NAME) as conn:
         df = pd.read_sql("SELECT title FROM jobs", conn)
 
-    if len(df) < 10:
-        print("Not enough data to run meaningful clustering.")
+    # Need at least a few jobs to run clustering
+    if len(df) < 5:
+        print("Not enough data for Machine Learning yet. Run the scraper first!")
         return
 
-    print(f"Vectorizing {len(df)} job titles...")
+    print(f"Training model on {len(df)} job titles...")
 
-    # 2. Feature Engineering (TF-IDF)
-    # We strip out English 'stop words' (and, the, is) to focus on the nouns/verbs.
-    vectorizer = TfidfVectorizer(stop_words='english', max_features=1000)
+    # 2. Vectorization (Convert text to numbers)
+    # TF-IDF penalizes common words (like "Senior") and boosts unique ones (like "Django")
+    vectorizer = TfidfVectorizer(stop_words='english')
     X = vectorizer.fit_transform(df['title'])
 
-    # 3. Determine Optimal K (Elbow Method)
-    # We test k=1 to k=10 to see where the 'inertia' (error) levels off.
-    inertias = []
-    k_range = range(1, 10)
-    
-    print("Calculating Elbow curve (optimal k)...")
-    for k in k_range:
-        model = KMeans(n_clusters=k, n_init=10, random_state=42)
-        model.fit(X)
-        inertias.append(model.inertia_)
-
-    # Save the Elbow plot for the report
-    plt.figure(figsize=(8, 4))
-    plt.plot(k_range, inertias, 'bx-')
-    plt.xlabel('k (Number of Clusters)')
-    plt.ylabel('Inertia')
-    plt.title('Elbow Method For Optimal k')
-    plt.savefig("elbow_method.png")
-
-    # 4. Apply Final Clustering
-    # Based on the elbow plot for this specific dataset, k=3 is usually the inflection point.
+    # 3. Clustering (K-Means)
+    # We use 3 clusters: usually splits into Data, Backend, and Fullstack/Web
     true_k = 3
-    model = KMeans(n_clusters=true_k, n_init=10, random_state=42)
+    model = KMeans(n_clusters=true_k, init='k-means++', n_init=10, random_state=42)
     model.fit(X)
+
+    # 4. Evaluation (Silhouette Score)
+    # A score close to 1 is great, 0 is overlapping, -1 is wrong.
+    score = silhouette_score(X, model.labels_)
+    print(f"Clustering Performance (Silhouette Score): {score:.3f}")
+
+    # 5. Insight Extraction (The "Why")
+    print("\n--- Market Segmentation Results ---")
     
-    # 5. Extract Insights (Centroids)
-    print("\n--- Cluster Analysis ---")
+    # Get the top keywords for each cluster center
     order_centroids = model.cluster_centers_.argsort()[:, ::-1]
     terms = vectorizer.get_feature_names_out()
 
     for i in range(true_k):
-        print(f"\nCluster {i} Top Terms:", end=" ")
-        # Print the top 5 words that are 'closest' to the center of this cluster
-        for ind in order_centroids[i, :5]:
-            print(f"[{terms[ind]}]", end=" ")
-        print()
+        print(f"\nCluster {i} (Key Themes):")
+        # Print the top 4 words that define this group
+        top_terms = [terms[ind] for ind in order_centroids[i, :4]]
+        print(f" -> {', '.join(top_terms)}")
+        
+        # Show sample jobs from this cluster
+        cluster_jobs = df.iloc[model.labels_ == i]['title'].head(3).tolist()
+        print(f"    Examples: {cluster_jobs}")
 
 if __name__ == "__main__":
-    run_clustering_pipeline()
+    run_ml_pipeline()

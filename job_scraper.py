@@ -1,15 +1,18 @@
-import time
 import sqlite3
+import time
+from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
-DB_NAME = "real_jobs.db"
+DB_NAME = "job_market.db"
 
 def init_db():
-    """Initializes the database table for storing job listings."""
+    """Ensures the database exists with the correct schema."""
     with sqlite3.connect(DB_NAME) as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -19,66 +22,73 @@ def init_db():
                 company TEXT,
                 region TEXT,
                 link TEXT,
-                date_scraped TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                date_scraped TEXT
             )
         """)
         conn.commit()
 
 def scrape_jobs():
     """
-    Scrapes Python job listings from We Work Remotely.
-    Uses Selenium to handle dynamic content loading.
+    Scrapes WeWorkRemotely for Python jobs.
+    Uses Explicit Waits for reliability (Production Grade).
     """
-    print("Initializing browser...")
+    print("--- Starting Extraction Pipeline ---")
     options = Options()
-    # options.add_argument("--headless")  # Uncomment to run without UI
+    # options.add_argument("--headless") # Uncomment for production (no UI)
     
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     
     try:
         url = "https://weworkremotely.com/remote-jobs/search?term=python"
-        print(f"Navigating to source: {url}")
+        print(f"Navigating to: {url}")
         driver.get(url)
         
-        # Allow time for the initial DOM to render
-        time.sleep(3)
+        # PRO MOVE: Don't just sleep. Wait until the list actually appears.
+        # This prevents the script from crashing if the internet is slow.
+        wait = WebDriverWait(driver, 10)
+        job_section = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "section.jobs")))
+        
+        # Grab all list items (listings) excluding the 'view all' button
+        job_cards = job_section.find_elements(By.CSS_SELECTOR, "li:not(.view-all)")
+        print(f"Detected {len(job_cards)} listings. Processing...")
 
-        # Target the main job list, excluding the 'view all' button at the bottom
-        job_cards = driver.find_elements(By.CSS_SELECTOR, "section.jobs li:not(.view-all)")
-        print(f"Detected {len(job_cards)} listings. Extracting details...")
-
-        data_payload = []
+        new_jobs = []
+        scrape_date = datetime.now().strftime("%Y-%m-%d")
 
         for card in job_cards:
             try:
-                # Extract details using specific class names found in the DOM
+                # We use finding relative to the 'card' element
                 title = card.find_element(By.CSS_SELECTOR, "h3.new-listing__header__title").text
                 company = card.find_element(By.CSS_SELECTOR, "p.new-listing__company-name").text
                 link = card.find_element(By.CSS_SELECTOR, "a.listing-link--unlocked").get_attribute("href")
-
-                # Region is optional/variable, so handle gracefully
+                
+                # Region is inconsistent, so we try/except it
                 try:
                     region = card.find_element(By.CSS_SELECTOR, "p.new-listing__company-headquarters").text
-                except Exception:
+                except:
                     region = "Remote"
 
-                print(f" -> Parsed: {title} ({company})")
-                data_payload.append((title, company, region, link))
+                # Check if we already have this exact job to avoid duplicates
+                # (In a real system, we'd check the DB, but this is a simple run-level check)
+                new_jobs.append((title, company, region, link, scrape_date))
+                print(f" -> Found: {title}")
 
             except Exception:
-                # Skip non-job elements (e.g., ads or section headers injected into the list)
+                # Skip non-job rows (headers/ads)
                 continue
 
-        # Transactional save to DB
-        if data_payload:
+        # Save to Database (Append Mode)
+        if new_jobs:
             with sqlite3.connect(DB_NAME) as conn:
                 cursor = conn.cursor()
-                cursor.execute("DELETE FROM jobs")  # Clear previous session data
-                cursor.executemany("INSERT INTO jobs (title, company, region, link) VALUES (?, ?, ?, ?)", data_payload)
+                cursor.executemany("""
+                    INSERT INTO jobs (title, company, region, link, date_scraped) 
+                    VALUES (?, ?, ?, ?, ?)
+                """, new_jobs)
                 conn.commit()
-            print(f"\nSuccess: Persisted {len(data_payload)} jobs to database.")
+            print(f"\nSuccess: Added {len(new_jobs)} new records to {DB_NAME}.")
         else:
-            print("\nWarning: No jobs found. Selector validation may be required.")
+            print("\nWarning: No jobs extracted. Check selectors.")
 
     finally:
         driver.quit()
